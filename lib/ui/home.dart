@@ -10,6 +10,7 @@ import 'design.dart';
 import 'editors.dart';
 import 'ai_center.dart';
 import 'workout.dart';
+import 'agenda.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key, required this.controller});
@@ -491,13 +492,10 @@ class _HomeState extends State<Home> {
             icon: Icons.calendar_month_outlined,
           )
         else
-          Panel(
-            padding: 8,
-            child: Column(
-              children: [
-                for (final e in today.take(wide ? 7 : 5)) _eventTile(e),
-              ],
-            ),
+          AgendaTimeline(
+            events: today.take(wide ? 7 : 5).toList(),
+            onView: details,
+            onComplete: complete,
           ),
       ],
     );
