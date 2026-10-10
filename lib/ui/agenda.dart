@@ -37,14 +37,14 @@ class AgendaTimeline extends StatelessWidget {
                         Text(
                           clock(events[i].start),
                           style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           clock(events[i].end),
-                          style: TextStyle(fontSize: 10, color: muted),
+                          style: TextStyle(fontSize: 12, color: muted),
                         ),
                         if (i < events.length - 1)
                           Expanded(
@@ -107,8 +107,8 @@ class AgendaTimeline extends StatelessWidget {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                         height: 1.5,
                       ),
                     ),
@@ -134,7 +134,7 @@ class AgendaTimeline extends StatelessWidget {
                         : const Text(
                             '打卡',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -158,12 +158,12 @@ class AgendaTimeline extends StatelessWidget {
                     ),
                     child: Text(
                       kindNames[event.kind] ?? '日程',
-                      style: const TextStyle(fontSize: 10, color: V.ink),
+                      style: const TextStyle(fontSize: 12, color: V.ink),
                     ),
                   ),
                   Text(
                     event.completed ? '已完成' : '待完成',
-                    style: TextStyle(fontSize: 11, color: muted),
+                    style: TextStyle(fontSize: 12, color: muted),
                   ),
                   if (event.reminder && event.priority == 'important')
                     _note(
@@ -189,7 +189,7 @@ class AgendaTimeline extends StatelessWidget {
     children: [
       Icon(icon, size: 13, color: muted),
       const SizedBox(width: 3),
-      Text(label, style: TextStyle(fontSize: 10, color: muted)),
+      Text(label, style: TextStyle(fontSize: 12, color: muted)),
     ],
   );
 }

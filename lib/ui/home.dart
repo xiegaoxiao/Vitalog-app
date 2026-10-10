@@ -533,7 +533,7 @@ class _HomeState extends State<Home> {
                 const Spacer(),
                 Text(
                   '${meals.where((e) => e.completed).length}/${meals.length} 餐已记录',
-                  style: const TextStyle(fontSize: 11, color: V.muted),
+                  style: const TextStyle(fontSize: 13, color: V.muted),
                 ),
               ],
             ),
@@ -545,7 +545,7 @@ class _HomeState extends State<Home> {
             const SizedBox(height: 10),
             const Text(
               '计划摄入 · 未提供的营养值显示为 —',
-              style: TextStyle(fontSize: 10, color: V.muted),
+              style: TextStyle(fontSize: 12, color: V.muted, height: 1.6),
             ),
           ],
         ),
@@ -826,7 +826,7 @@ class _HomeState extends State<Home> {
               const SizedBox(height: 10),
               const Text(
                 '实际摄入只汇总已打卡餐食。任一餐缺失某项营养时，该项合计显示 —。',
-                style: TextStyle(fontSize: 10, color: V.muted, height: 1.8),
+                style: TextStyle(fontSize: 12, color: V.muted, height: 1.6),
               ),
             ],
           ),
@@ -1147,10 +1147,10 @@ class _HomeState extends State<Home> {
       ),
       SectionTitle(
         '${dateKey(selected)} 的安排',
-        trailing: IconButton(
+        trailing: TextButton.icon(
           onPressed: () => editEvent(context, controller: c, day: selected),
-          tooltip: '添加安排',
-          icon: const Icon(Icons.add_circle_outline, color: V.blue),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('添加安排'),
         ),
       ),
       if (items.isEmpty)
@@ -1162,11 +1162,8 @@ class _HomeState extends State<Home> {
             child: const Text('添加安排'),
           ),
         ),
-      for (final e in items)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Panel(padding: 6, child: _eventTile(e)),
-        ),
+      if (items.isNotEmpty)
+        AgendaTimeline(events: items, onView: details, onComplete: complete),
       const SizedBox(height: 12),
       OutlinedButton.icon(
         onPressed: ai,
@@ -1344,6 +1341,7 @@ class _HomeState extends State<Home> {
         child: Column(
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: _stat(
@@ -1390,6 +1388,7 @@ class _HomeState extends State<Home> {
         child: Column(
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: _stat(
@@ -1420,7 +1419,7 @@ class _HomeState extends State<Home> {
             const SizedBox(height: 14),
             const Text(
               '能量消耗由身体数据和活动系数估算，可在档案中修改活动量；不代表实测结果。',
-              style: TextStyle(fontSize: 10, color: V.muted, height: 1.8),
+              style: TextStyle(fontSize: 12, color: V.muted, height: 1.6),
             ),
           ],
         ),
@@ -1524,25 +1523,8 @@ class _HomeState extends State<Home> {
     ];
   }
 
-  Widget _stat(String label, String value, String unit, Color color) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(label, style: const TextStyle(fontSize: 10, color: V.muted)),
-      const SizedBox(height: 8),
-      FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          value,
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.w800,
-            color: color,
-          ),
-        ),
-      ),
-      Text(unit, style: const TextStyle(fontSize: 10, color: V.muted)),
-    ],
-  );
+  Widget _stat(String label, String value, String unit, Color color) =>
+      MetricTile(label: label, value: value, unit: unit, accent: color);
   Widget _sleepPanel() {
     final active = d.sleeps.where((s) => s['end'] == null).firstOrNull;
     final last = d.sleeps.where((s) => s['end'] != null).lastOrNull;

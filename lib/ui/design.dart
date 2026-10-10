@@ -341,7 +341,7 @@ class Tag extends StatelessWidget {
     ),
     child: Text(
       text,
-      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: V.ink),
+      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: V.ink),
     ),
   );
 }
@@ -471,38 +471,136 @@ class FoodPicture extends StatelessWidget {
   );
 }
 
+/// Shared, readable typography for nutrition and body measurements.
+class MetricTile extends StatelessWidget {
+  const MetricTile({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.unit,
+    this.compact = false,
+    this.accent,
+  });
+  final String label, value, unit;
+  final bool compact;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label: '$label $value $unit',
+      excludeSemantics: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ConstrainedBox(
+            constraints: BoxConstraints(minHeight: accent == null ? 0 : 42),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (accent != null) ...[
+                  Container(
+                    width: 6,
+                    height: 6,
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      color: accent,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: compact ? 13 : 14,
+                      fontWeight: FontWeight.w500,
+                      color: scheme.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 5,
+            runSpacing: 2,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: compact ? 20 : 22,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
+                  height: 1.3,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text(
+                  unit,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class NutritionRow extends StatelessWidget {
   const NutritionRow(this.nutrition, {super.key, this.compact = false});
   final Json nutrition;
   final bool compact;
   @override
-  Widget build(BuildContext context) => Row(
-    children: nutrientKeys
-        .map(
-          (key) => Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  number(nutrition[key])
-                          ?.toStringAsFixed(key == 'calories' ? 0 : 1) ??
-                      '—',
-                  style: TextStyle(
-                    fontSize: compact ? 17 : 23,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${nutrientNames[key]} ${key == 'calories' ? 'kcal' : 'g'}',
-                  style: const TextStyle(fontSize: 10, color: V.muted),
-                ),
-              ],
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      const gap = 16.0;
+      final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+      final minimum = (compact ? 110 : 120) * scale;
+      final columns = constraints.maxWidth >= minimum * 4 + gap * 3
+          ? 4
+          : constraints.maxWidth >= minimum * 2 + gap
+          ? 2
+          : 1;
+      final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+      return Wrap(
+        spacing: gap,
+        runSpacing: compact ? 14 : 18,
+        children: [
+          for (final key in nutrientKeys)
+            SizedBox(
+              width: width,
+              child: MetricTile(
+                label: nutrientNames[key]!,
+                value: _value(key),
+                unit: key == 'calories' ? 'kcal' : 'g',
+                compact: compact,
+              ),
             ),
-          ),
-        )
-        .toList(),
+        ],
+      );
+    },
   );
+
+  String _value(String key) {
+    final value = number(nutrition[key]);
+    if (value == null) return '—';
+    final text = value.toStringAsFixed(key == 'calories' ? 0 : 1);
+    return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
+  }
 }
 
 Future<DateTime?> chooseDateTime(BuildContext context, DateTime initial) async {
