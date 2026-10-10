@@ -289,6 +289,41 @@ class Panel extends StatelessWidget {
   );
 }
 
+/// A small sticker-style entry point that belongs inside a colored card.
+class CardAction extends StatelessWidget {
+  const CardAction({super.key, required this.label, required this.onPressed});
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton(
+    onPressed: onPressed,
+    style: OutlinedButton.styleFrom(
+      backgroundColor: V.cream,
+      foregroundColor: V.ink,
+      minimumSize: const Size(0, 48),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      side: const BorderSide(color: V.ink, width: 1.8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      textStyle: const TextStyle(
+        fontFamily: 'NotoSansSC',
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0,
+        height: 1.35,
+      ),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(child: Text(label)),
+        const SizedBox(width: 8),
+        const Icon(Icons.arrow_forward_rounded, size: 18),
+      ],
+    ),
+  );
+}
+
 class Tag extends StatelessWidget {
   const Tag(this.text, {super.key, this.color = V.blue, this.solid = false});
   final String text;

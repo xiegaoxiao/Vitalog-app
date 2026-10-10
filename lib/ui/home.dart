@@ -408,14 +408,9 @@ class _HomeState extends State<Home> {
                   style: const TextStyle(fontSize: 12, color: V.muted),
                 ),
                 const SizedBox(height: 14),
-                TextButton.icon(
+                CardAction(
                   onPressed: next == null ? ai : () => details(next),
-                  style: TextButton.styleFrom(
-                    foregroundColor: V.ink,
-                    padding: EdgeInsets.zero,
-                  ),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-                  label: Text(next == null ? '生成我的计划' : '查看安排'),
+                  label: next == null ? '生成我的计划' : '查看安排',
                 ),
               ],
             ),
