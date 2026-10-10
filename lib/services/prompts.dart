@@ -74,10 +74,17 @@ String buildPrompt(
   DateTime start,
   DateTime end,
   String module,
-  bool includeHistory,
-) {
+  bool includeHistory, {
+  Json? profileOverrides,
+  Json? planningParameters,
+  Set<String>? historySections,
+}) {
   final context = <String, dynamic>{
-    'profile': {...data.profile, 'currentWeight': data.currentWeight},
+    'profile': {
+      ...data.profile,
+      'currentWeight': data.currentWeight,
+      ...?profileOverrides,
+    },
     'inventory': data.inventory.map((e) => e.toJson()).toList(),
     'fixedSchedule': data.events
         .where(
@@ -100,6 +107,16 @@ String buildPrompt(
       'wakeTime': data.settings['wakeTime'],
     },
   };
+  if (planningParameters != null) {
+    context['planningParameters'] = planningParameters;
+    final sleep = planningParameters['habit'];
+    if (sleep is Map) {
+      context['sleepPreferences'] = {
+        'sleepTime': sleep['准备睡觉 · HH:mm'],
+        'wakeTime': sleep['起床时间 · HH:mm'],
+      };
+    }
+  }
   if (includeHistory) {
     final since = DateTime.now().subtract(const Duration(days: 7));
     context['lastWeek'] = {
@@ -125,16 +142,29 @@ String buildPrompt(
           .where((e) => DateTime.parse(e['date'] as String).isAfter(since))
           .toList(),
     };
+    if (historySections != null) {
+      (context['lastWeek'] as Json).removeWhere(
+        (key, _) => !historySections.contains(key),
+      );
+      final lastWeek = context['lastWeek'] as Json;
+      if (lastWeek['executed'] is List &&
+          !historySections.contains('allExecuted')) {
+        lastWeek['executed'] = (lastWeek['executed'] as List)
+            .where((e) => historySections.contains(e['kind']))
+            .toList();
+      }
+    }
   }
   return '''请为我制定 ${dateKey(start)} 至 ${dateKey(end)} 的${module == 'all' ? '作息、饮食、训练与习惯综合' : kindNames[module]}计划，供元气簿 Vitalog 导入。
 我的信息与限制（可向我追问缺失的关键条件）：
 ${const JsonEncoder.withIndent('  ').convert(context)}
 
 要求：
+0. planningParameters 是我在输入框中设置的本轮量化条件，单位写在字段名中；这些条件优先于档案中的旧文字偏好。未填写的数值不是 0，不代表没有限制；关键条件缺失请先询问我。热量与营养素为每日目标，须按餐分配；不能同时满足时说明冲突并让我选择，不要静默改数值。重要提醒按我填写的分钟数，未填写时默认 15 分钟。
 1. 结合目标、预算、饮食禁忌、做饭器具、储存条件、已有食材、训练经验与场地；避开课程和固定安排，留出通勤、做饭和休息时间。
 2. 饮食尽量简单，提供食材重量与单位、步骤、耗时、每餐估算热量 kcal、蛋白质/碳水/脂肪 g。不能可靠估算则填 null，禁止将缺失值填 0。不要把所有人的目标热量固定为一个数。
 3. 训练提供动作名称、组数、次数或计时（seconds）、重量（未知填 null）、休息秒数和动作要点；安排循序渐进和恢复，不依据 BMI 直接制定高强度训练。
-4. 提醒 priority 使用 important / normal / quiet：课程和组会通常 important，提前 15 分钟；训练 normal；饮食通常 quiet 且 reminder=false。alarm 默认 false，交给我决定。
+4. 提醒 priority 使用 important / normal / quiet：课程和组会通常 important，提前分钟数按 planningParameters（未填写时为 15）；训练 normal；饮食通常 quiet 且 reminder=false。alarm 默认 false，交给我决定。
 5. 不修改已经发生的执行记录，不自动改变固定课程。综合计划用 modules 声明要更新的类型；只生成所需的模块。
 6. 每个安排输出独立日期时间，展开重复日程；start/end 使用 ISO 8601 并写明 +08:00（我在中国），end 晚于 start。所有事项的开始日期在声明周期内；id 必须唯一、稳定。
 7. 如信息不足或存在运动限制，先说明并询问我；输出计划前核对日程冲突、食材用量与每日营养总量。导入格式只接受可解析的 JSON，不包含注释。

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../data/controller.dart';
 import '../data/models.dart';
 import '../services/prompts.dart';
+import '../services/prompt_parameters.dart';
 import '../services/calendar_import.dart';
 import '../services/plan_import.dart';
 import 'design.dart';
@@ -23,6 +24,18 @@ class _AiCenterState extends State<AiCenter> {
   int tab = 0;
   String module = 'meal';
   bool history = false;
+  final historySections = <String>{
+    'weights',
+    'sleep',
+    'meal',
+    'workout',
+    'habits',
+  };
+  final form = GlobalKey<FormState>();
+  final scroll = ScrollController();
+  late final Map<String, TextEditingController> parameters;
+  String sex = '', activity = '';
+  bool generated = false, dirty = false;
   DateTime start = dayOf(DateTime.now()),
       end = dayOf(DateTime.now()).add(const Duration(days: 6));
   final prompt = TextEditingController();
@@ -32,17 +45,98 @@ class _AiCenterState extends State<AiCenter> {
   @override
   void initState() {
     super.initState();
-    generate();
+    parameters = {
+      for (final entry in initialPromptParameters(widget.c.data).entries)
+        entry.key: TextEditingController(text: entry.value),
+    };
+    sex = widget.c.data.profile['sex'] as String? ?? '';
+    activity = widget.c.data.profile['activity']?.toString() ?? '';
   }
 
-  void generate() {
-    prompt.text = buildPrompt(widget.c.data, start, end, module, history);
+  void changed() {
+    if (generated && !dirty) setState(() => dirty = true);
+  }
+
+  Future<void> generate() async {
+    if (end.isBefore(start) || end.difference(start).inDays > 366) {
+      toast(context, '请选择一年以内的有效周期');
+      return;
+    }
+    form.currentState?.validate();
+    for (final p in promptParameters.where(
+      (p) => parameterApplies(p, module),
+    )) {
+      final message = p.validate(parameters[p.key]!.text);
+      if (message != null) {
+        toast(context, '${p.label}：$message');
+        return;
+      }
+    }
+    setState(() => loading = true);
+    try {
+      final raw = {
+        for (final e in parameters.entries) e.key: e.value.text.trim(),
+      };
+      final parsed = parsePromptParameters(raw, module);
+      parsed.profile['sex'] = sex.isEmpty ? null : sex;
+      parsed.profile['activity'] = num.tryParse(activity);
+      final sections = {...historySections};
+      if (sections.contains('meal') || sections.contains('workout')) {
+        sections.add('executed');
+      }
+      final text = buildPrompt(
+        widget.c.data,
+        start,
+        end,
+        module,
+        history,
+        profileOverrides: parsed.profile,
+        planningParameters: parsed.constraints,
+        historySections: sections,
+      );
+      await widget.c.mutate((data) {
+        data.settings['promptParameters'] = {
+          for (final p in promptParameters)
+            if (p.group != 'profile' &&
+                ![
+                  'cooking',
+                  'preferences',
+                  'allergies',
+                  'training',
+                ].contains(p.key))
+              p.key: raw[p.key],
+        };
+      });
+      if (!mounted) return;
+      setState(() {
+        prompt.text = text;
+        generated = true;
+        dirty = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && scroll.hasClients) {
+          scroll.animateTo(
+            scroll.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    } catch (e) {
+      if (mounted) toast(context, errorText(e));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
   }
 
   @override
   void dispose() {
     prompt.dispose();
     input.dispose();
+    scroll.dispose();
+    for (final c in parameters.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -95,10 +189,52 @@ class _AiCenterState extends State<AiCenter> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('AI 计划工作台')),
+    bottomNavigationBar: tab == 0
+        ? SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: loading ? null : generate,
+                      icon: const Icon(Icons.auto_awesome_outlined),
+                      label: Text(
+                        loading
+                            ? '正在生成…'
+                            : generated
+                            ? '重新生成'
+                            : '生成提示词',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: !generated || dirty || loading
+                          ? null
+                          : () async {
+                              await Clipboard.setData(
+                                ClipboardData(text: prompt.text),
+                              );
+                              if (context.mounted) {
+                                toast(context, '提示词已复制，可以交给你使用的 AI');
+                              }
+                            },
+                      icon: const Icon(Icons.copy_rounded),
+                      label: const Text('复制提示词'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : null,
     body: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 820),
         child: ListView(
+          controller: scroll,
           padding: const EdgeInsets.all(20),
           children: [
             Panel(
@@ -109,7 +245,7 @@ class _AiCenterState extends State<AiCenter> {
                   Tag('你的计划，你做主', color: V.ink),
                   SizedBox(height: 14),
                   Text(
-                    '让 AI 做规划\n让元气簿陪你执行',
+                    '先填条件\n再让 AI 做规划',
                     style: TextStyle(
                       fontSize: 25,
                       fontWeight: FontWeight.w700,
@@ -119,8 +255,8 @@ class _AiCenterState extends State<AiCenter> {
                   ),
                   SizedBox(height: 12),
                   Text(
-                    '复制提示词 → 外部 AI → 导入预览 → 加入计划',
-                    style: TextStyle(fontSize: 12, color: V.muted),
+                    '填写参数 → 生成提示词 → 外部 AI → 导入预览',
+                    style: TextStyle(fontSize: 13, color: V.muted),
                   ),
                 ],
               ),
@@ -130,7 +266,7 @@ class _AiCenterState extends State<AiCenter> {
               segments: const [
                 ButtonSegment(
                   value: 0,
-                  label: Text('生成提示词'),
+                  label: Text('填写参数'),
                   icon: Icon(Icons.auto_awesome),
                 ),
                 ButtonSegment(
@@ -152,7 +288,10 @@ class _AiCenterState extends State<AiCenter> {
                     ChoiceChip(
                       label: Text(kind == 'all' ? '综合计划' : kindNames[kind]!),
                       selected: module == kind,
-                      onSelected: (_) => setState(() => module = kind),
+                      onSelected: (_) => setState(() {
+                        module = kind;
+                        if (generated) dirty = true;
+                      }),
                     ),
                 ],
               ),
@@ -170,6 +309,7 @@ class _AiCenterState extends State<AiCenter> {
                           if (end.isBefore(start)) {
                             end = start.add(const Duration(days: 6));
                           }
+                          if (generated) dirty = true;
                         });
                       }
                     },
@@ -179,55 +319,96 @@ class _AiCenterState extends State<AiCenter> {
                     onPressed: () async {
                       final d = await chooseDate(context, end);
                       if (d != null) {
-                        setState(() => end = d);
+                        setState(() {
+                          end = d;
+                          if (generated) dirty = true;
+                        });
                       }
                     },
                     child: Text('结束 ${dateKey(end)}'),
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              const Text(
+                '能量、营养和训练指标可留空，交给 AI 询问或建议。身体信息来自档案，这里的修改只用于本轮规划。',
+                style: TextStyle(fontSize: 13, height: 1.7),
+              ),
+              const SizedBox(height: 12),
+              Form(
+                key: form,
+                child: Column(
+                  children: [
+                    parameterGroup('身体与目标', 'profile', expanded: false),
+                    if (module == 'meal' || module == 'all')
+                      parameterGroup('饮食参数', 'meal'),
+                    if (module == 'workout' || module == 'all')
+                      parameterGroup('训练参数', 'workout'),
+                    if (module == 'habit' || module == 'all')
+                      parameterGroup('作息参数', 'habit'),
+                    parameterGroup('时间预留与补充', 'common', expanded: false),
+                  ],
+                ),
+              ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('附带最近一周的执行记录'),
-                subtitle: const Text('体重、睡眠、饮食、训练与习惯'),
+                subtitle: const Text('选择允许 AI 参考的记录'),
                 value: history,
-                onChanged: (v) => setState(() => history = v),
+                onChanged: (v) => setState(() {
+                  history = v;
+                  if (generated) dirty = true;
+                }),
               ),
-              FilledButton.tonalIcon(
-                onPressed: () {
-                  if (end.isBefore(start) ||
-                      end.difference(start).inDays > 366) {
-                    toast(context, '请选择一年以内的有效周期');
-                    return;
-                  }
-                  setState(generate);
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('生成 / 更新提示词'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: prompt,
-                maxLines: 16,
-                decoration: const InputDecoration(
-                  labelText: '复制前可以查看、删改',
-                  alignLabelWithHint: true,
+              if (history)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final entry in const {
+                      'weights': '体重',
+                      'sleep': '睡眠',
+                      'meal': '饮食',
+                      'workout': '训练',
+                      'habits': '习惯',
+                    }.entries)
+                      FilterChip(
+                        label: Text(entry.value),
+                        selected: historySections.contains(entry.key),
+                        onSelected: (value) => setState(() {
+                          value
+                              ? historySections.add(entry.key)
+                              : historySections.remove(entry.key);
+                          if (generated) dirty = true;
+                        }),
+                      ),
+                  ],
                 ),
-              ),
               const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: prompt.text));
-                  if (context.mounted) {
-                    toast(context, '提示词已复制，可以交给你使用的 AI');
-                  }
-                },
-                icon: const Icon(Icons.copy_rounded),
-                label: const Text('复制提示词'),
-              ),
+              if (dirty)
+                Panel(
+                  color: V.orange,
+                  padding: 12,
+                  child: const Text(
+                    '参数已改变，请重新生成后再复制。重新生成会替换下方手动编辑的提示词。',
+                    style: TextStyle(fontSize: 13, height: 1.7),
+                  ),
+                ),
+              if (generated) ...[
+                const SectionTitle('提示词预览', subtitle: '已包含库存与固定安排，复制前仍可删改'),
+                TextField(
+                  key: const Key('generated-prompt'),
+                  controller: prompt,
+                  maxLines: 12,
+                  decoration: const InputDecoration(
+                    labelText: '最终提示词',
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               const Text(
-                '应用只复制你确认的内容。生成计划时可继续向 AI 补充条件，再把最终 JSON 带回来。',
+                '生成时将计划参数保存在本机；身体档案、目标作息与执行记录不会被这里的输入修改。复制前可以查看完整内容，再交给外部 AI。',
                 style: TextStyle(fontSize: 12, color: V.muted, height: 1.8),
               ),
             ] else ...[
@@ -297,6 +478,134 @@ class _AiCenterState extends State<AiCenter> {
       ),
     ),
   );
+
+  Widget parameterGroup(String title, String group, {bool expanded = true}) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Panel(
+        padding: 0,
+        child: ExpansionTile(
+          key: PageStorageKey('prompt-$group'),
+          initiallyExpanded: expanded,
+          maintainState: true,
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            group == 'profile' ? '从当前档案带入，可展开调整' : '按你的实际条件填写，留空表示未指定',
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
+          shape: const Border(),
+          collapsedShape: const Border(),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final twoColumns =
+                    width >= 290 &&
+                    MediaQuery.textScalerOf(context).scale(14) <= 20;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 16,
+                  children: [
+                    for (final p in promptParameters.where(
+                      (p) => p.group == group,
+                    ))
+                      SizedBox(
+                        width: twoColumns && !p.multiline
+                            ? (width - 12) / 2
+                            : width,
+                        child: TextFormField(
+                          key: ValueKey('parameter-${p.key}'),
+                          controller: parameters[p.key],
+                          validator: p.validate,
+                          onChanged: (_) => changed(),
+                          maxLines: p.multiline ? 2 : 1,
+                          keyboardType: p.numeric
+                              ? TextInputType.numberWithOptions(
+                                  decimal: !p.integer,
+                                )
+                              : p.time
+                              ? TextInputType.datetime
+                              : TextInputType.multiline,
+                          style: const TextStyle(fontSize: 16),
+                          decoration: InputDecoration(
+                            labelText: p.inputLabel,
+                            floatingLabelBehavior: FloatingLabelBehavior.always,
+                            hintText: p.time ? '例如 07:30' : '可留空',
+                            alignLabelWithHint: true,
+                          ),
+                        ),
+                      ),
+                    if (group == 'profile') ...[
+                      SizedBox(
+                        width: width,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: ['', 'male', 'female'].contains(sex)
+                              ? sex
+                              : '',
+                          decoration: const InputDecoration(labelText: '性别'),
+                          items: const [
+                            DropdownMenuItem(value: '', child: Text('未指定')),
+                            DropdownMenuItem(value: 'male', child: Text('男')),
+                            DropdownMenuItem(value: 'female', child: Text('女')),
+                          ],
+                          onChanged: (v) {
+                            sex = v!;
+                            changed();
+                          },
+                        ),
+                      ),
+                      SizedBox(
+                        width: width,
+                        child: DropdownButtonFormField<String>(
+                          initialValue:
+                              [
+                                '',
+                                '1.2',
+                                '1.375',
+                                '1.55',
+                                '1.725',
+                              ].contains(activity)
+                              ? activity
+                              : '',
+                          decoration: const InputDecoration(labelText: '日常活动量'),
+                          items: const [
+                            DropdownMenuItem(value: '', child: Text('未指定')),
+                            DropdownMenuItem(value: '1.2', child: Text('久坐')),
+                            DropdownMenuItem(
+                              value: '1.375',
+                              child: Text('轻度活动'),
+                            ),
+                            DropdownMenuItem(
+                              value: '1.55',
+                              child: Text('中等活动'),
+                            ),
+                            DropdownMenuItem(
+                              value: '1.725',
+                              child: Text('较多活动'),
+                            ),
+                          ],
+                          onChanged: (v) {
+                            activity = v!;
+                            changed();
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void set(VoidCallback action) => setState(action);
 }
 
