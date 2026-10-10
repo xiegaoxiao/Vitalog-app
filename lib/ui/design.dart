@@ -15,6 +15,13 @@ class V {
   static const green = Color(0xFFA8D6B5);
   static const purple = Color(0xFFD5B9E8);
   static const muted = Color(0xFF756769);
+  static const buttonTextStyle = TextStyle(
+    fontFamily: 'NotoSansSC',
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0,
+    height: 1.35,
+  );
   static Color color(String kind) => switch (kind) {
     'meal' => orange,
     'workout' => green,
@@ -85,10 +92,8 @@ class V {
         style: FilledButton.styleFrom(
           backgroundColor: pink,
           foregroundColor: ink,
-          textStyle: const TextStyle(
-            fontFamily: 'NotoSansSC',
-            fontWeight: FontWeight.w700,
-          ),
+          textStyle: buttonTextStyle,
+          iconSize: 18,
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
@@ -100,6 +105,8 @@ class V {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 46),
           foregroundColor: dark ? cream : ink,
+          textStyle: buttonTextStyle,
+          iconSize: 18,
           side: BorderSide(color: scheme.outline, width: 2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -108,10 +115,15 @@ class V {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: dark ? pink : ink,
-          textStyle: const TextStyle(
-            fontFamily: 'NotoSansSC',
-            fontWeight: FontWeight.w700,
+          backgroundColor: scheme.surface,
+          foregroundColor: dark ? cream : ink,
+          textStyle: buttonTextStyle,
+          iconSize: 18,
+          minimumSize: const Size(0, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          side: BorderSide(color: scheme.outline, width: 1.8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
@@ -296,22 +308,12 @@ class CardAction extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => OutlinedButton(
+  Widget build(BuildContext context) => TextButton(
     onPressed: onPressed,
-    style: OutlinedButton.styleFrom(
+    style: TextButton.styleFrom(
       backgroundColor: V.cream,
       foregroundColor: V.ink,
-      minimumSize: const Size(0, 48),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       side: const BorderSide(color: V.ink, width: 1.8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      textStyle: const TextStyle(
-        fontFamily: 'NotoSansSC',
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0,
-        height: 1.35,
-      ),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,

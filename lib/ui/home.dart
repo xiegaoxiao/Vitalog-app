@@ -365,9 +365,9 @@ class _HomeState extends State<Home> {
         ),
       ),
       const SizedBox(height: 14),
-      TextButton(
+      CardAction(
         onPressed: () => action(() => c.restore(demoData(DateTime.now()))),
-        child: const Text('先体验示例数据 →'),
+        label: '先体验示例数据',
       ),
     ],
   );
@@ -472,12 +472,12 @@ class _HomeState extends State<Home> {
       children: [
         SectionTitle(
           '今日节奏',
-          trailing: TextButton(
+          trailing: CardAction(
             onPressed: () => setState(() {
               tab = 2;
               selected = dayOf(DateTime.now());
             }),
-            child: const Text('完整日程 →'),
+            label: '完整日程',
           ),
         ),
         if (today.isEmpty)
@@ -506,9 +506,9 @@ class _HomeState extends State<Home> {
       children: [
         SectionTitle(
           '今天吃什么',
-          trailing: TextButton(
+          trailing: CardAction(
             onPressed: () => setState(() => tab = 1),
-            child: const Text('餐单 →'),
+            label: '餐单',
           ),
         ),
         if (meals.isEmpty)
