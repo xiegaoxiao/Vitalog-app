@@ -138,13 +138,23 @@ class V {
       chipTheme: ChipThemeData(
         backgroundColor: scheme.surface,
         selectedColor: orange,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+        showCheckmark: true,
+        checkmarkColor: ink,
+        iconTheme: const IconThemeData(size: 18),
         side: BorderSide(color: scheme.outline, width: 1.7),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         labelStyle: WidgetStateTextStyle.resolveWith(
           (states) => TextStyle(
             color: dark && !states.contains(WidgetState.selected) ? cream : ink,
             fontFamily: 'NotoSansSC',
-            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            height: 1.4,
+            letterSpacing: 0,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w600
+                : FontWeight.w500,
           ),
         ),
       ),
