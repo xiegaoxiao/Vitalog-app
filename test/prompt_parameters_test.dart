@@ -24,6 +24,24 @@ Json promptContext(String text) =>
         as Json;
 
 void main() {
+  test('old time drafts normalize without accepting invalid clock values', () {
+    for (final p in promptParameters.where((p) => p.time)) {
+      expect(p.parse('8:00'), '08:00');
+      expect(p.parse(' 8：00 '), '08:00');
+      expect(p.parse('0:00'), '00:00');
+      expect(p.parse('23:59'), '23:59');
+      expect(p.parse(''), null);
+      for (final invalid in ['24:00', '8:60', '8:0', 'abc']) {
+        expect(() => p.parse(invalid), throwsFormatException);
+      }
+    }
+    final data = AppData(
+      settings: {
+        'promptParameters': {'breakfast': '8:00'},
+      },
+    );
+    expect(initialPromptParameters(data)['breakfast'], '08:00');
+  });
   test(
     'quantified targets replace draft profile values without editing records',
     () {
@@ -157,6 +175,37 @@ void main() {
         null,
       );
       final calories = find.byKey(const Key('parameter-calories'));
+      final breakfast = find.byKey(const Key('parameter-breakfast'));
+      await tester.ensureVisible(breakfast);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(
+              find.descendant(of: breakfast, matching: find.byType(TextField)),
+            )
+            .readOnly,
+        true,
+      );
+      await tester.tap(breakfast);
+      await tester.pumpAndSettle();
+      expect(find.byType(TimePickerDialog), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(TimePickerDialog),
+          matching: find.byType(EditableText),
+        ),
+        findsNothing,
+      );
+      await tester.tap(find.text('确定'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextFormField>(breakfast).controller!.text, '08:00');
+      await tester.tap(find.byTooltip('清空早餐时间'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextFormField>(breakfast).controller!.text, '');
+      await tester.tap(breakfast);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('确定'));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(calories);
       await tester.enterText(calories, '-2');
       await tester.tap(find.widgetWithText(FilledButton, '生成提示词'));
@@ -176,6 +225,10 @@ void main() {
       expect(
         tester.widget<TextField>(preview).controller!.text,
         contains('1900'),
+      );
+      expect(
+        tester.widget<TextField>(preview).controller!.text,
+        contains('08:00'),
       );
       expect(
         tester

@@ -57,6 +57,39 @@ class _AiCenterState extends State<AiCenter> {
     if (generated && !dirty) setState(() => dirty = true);
   }
 
+  Future<void> pickParameterTime(PromptParameter p) async {
+    final raw = parameters[p.key]!.text;
+    final normalized = p.validate(raw) == null ? p.parse(raw) as String? : null;
+    final fallbackHour = switch (p.key) {
+      'breakfast' => 8,
+      'lunch' => 12,
+      'dinner' => 18,
+      'sleepTime' => 23,
+      _ => 7,
+    };
+    final parts = normalized?.split(':');
+    final time = await showTimePicker(
+      context: context,
+      initialTime: parts == null
+          ? TimeOfDay(hour: fallbackHour, minute: 0)
+          : TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1])),
+      initialEntryMode: TimePickerEntryMode.dialOnly,
+      helpText: '选择${p.inputLabel}',
+      cancelText: '取消',
+      confirmText: '确定',
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+    if (time == null || !mounted) return;
+    setState(() {
+      parameters[p.key]!.text =
+          '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+      if (generated) dirty = true;
+    });
+  }
+
   Future<void> generate() async {
     if (end.isBefore(start) || end.difference(start).inDays > 366) {
       toast(context, '请选择一年以内的有效周期');
@@ -521,6 +554,9 @@ class _AiCenterState extends State<AiCenter> {
                         child: TextFormField(
                           key: ValueKey('parameter-${p.key}'),
                           controller: parameters[p.key],
+                          readOnly: p.time,
+                          enableInteractiveSelection: !p.time,
+                          onTap: p.time ? () => pickParameterTime(p) : null,
                           validator: p.validate,
                           onChanged: (_) => changed(),
                           maxLines: p.multiline ? 2 : 1,
@@ -535,7 +571,30 @@ class _AiCenterState extends State<AiCenter> {
                           decoration: InputDecoration(
                             labelText: p.inputLabel,
                             floatingLabelBehavior: FloatingLabelBehavior.always,
-                            hintText: p.time ? '例如 07:30' : '可留空',
+                            hintText: p.time ? '点击选择' : '可留空',
+                            suffixIcon: p.time
+                                ? IconButton(
+                                    tooltip: parameters[p.key]!.text.isEmpty
+                                        ? '选择${p.inputLabel}'
+                                        : '清空${p.inputLabel}',
+                                    icon: Icon(
+                                      parameters[p.key]!.text.isEmpty
+                                          ? Icons.schedule_outlined
+                                          : Icons.close_rounded,
+                                      size: 18,
+                                    ),
+                                    onPressed: () {
+                                      if (parameters[p.key]!.text.isEmpty) {
+                                        pickParameterTime(p);
+                                      } else {
+                                        setState(() {
+                                          parameters[p.key]!.clear();
+                                          if (generated) dirty = true;
+                                        });
+                                      }
+                                    },
+                                  )
+                                : null,
                             alignLabelWithHint: true,
                           ),
                         ),

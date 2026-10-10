@@ -33,8 +33,10 @@ class PromptParameter {
   String? validate(String? raw) {
     final text = (raw ?? '').trim();
     if (text.isEmpty) return null;
-    if (time && !RegExp(r'^(?:[01]\d|2[0-3]):[0-5]\d$').hasMatch(text)) {
-      return '请用 HH:mm，例如 07:30';
+    if (time &&
+        !RegExp(r'^(?:[01]?\d|2[0-3]):[0-5]\d$')
+            .hasMatch(text.replaceAll('：', ':'))) {
+      return '请选择有效时间';
     }
     if (numeric) {
       final value = num.tryParse(text);
@@ -52,6 +54,7 @@ class PromptParameter {
     if (error != null) throw FormatException('$label：$error');
     final text = (raw ?? '').trim();
     if (text.isEmpty) return null;
+    if (time) return text.replaceAll('：', ':').padLeft(5, '0');
     if (!numeric) return text;
     return integer ? num.parse(text).toInt() : num.parse(text);
   }
@@ -179,6 +182,11 @@ Map<String, String> initialPromptParameters(AppData data) {
     if (saved is! Map || saved[key] is! String) {
       result[key] = data.settings[key] as String? ?? '';
     }
+  }
+  for (final p in promptParameters.where((p) => p.time)) {
+    result[p.key] = p.validate(result[p.key]) == null
+        ? p.parse(result[p.key]) as String? ?? ''
+        : '';
   }
   return result;
 }
