@@ -32,6 +32,27 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   timezone.initializeTimeZones();
   final today = DateTime(2026, 10, 10);
+  test('style selection persists independently of brightness and accepts older backups', () async {
+    final store = MemoryStore();
+    final c = AppController(store: store);
+    c.data = demoData(today);
+    await c.mutate((d) {
+      d.settings['appearance'] = 'cartoon';
+      d.settings['theme'] = 'dark';
+    });
+    final reloaded = AppController(store: store);
+    await reloaded.load();
+    expect(reloaded.data.settings['appearance'], 'cartoon');
+    expect(reloaded.data.settings['theme'], 'dark');
+    final old = reloaded.data.toJson();
+    (old['settings'] as Json).remove('appearance');
+    expect(
+      validateBackup(jsonEncode(old)).settings['appearance'] ?? 'classic',
+      'classic',
+    );
+    (old['settings'] as Json)['appearance'] = 'unknown';
+    expect(() => validateBackup(jsonEncode(old)), throwsFormatException);
+  });
   test('missing nutrients stay unknown rather than pretending to be zero', () {
     expect(
       nutrientTotal([

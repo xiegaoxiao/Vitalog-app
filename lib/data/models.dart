@@ -149,7 +149,12 @@ class AppData {
        habits = habits ?? [],
        settings =
            settings ??
-           {'theme': 'light', 'sleepTime': '23:00', 'wakeTime': '07:00'};
+           {
+             'theme': 'light',
+             'appearance': 'classic',
+             'sleepTime': '23:00',
+             'wakeTime': '07:00',
+           };
   Json profile;
   List<PlanItem> events;
   List<InventoryItem> inventory;

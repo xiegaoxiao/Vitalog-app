@@ -5,6 +5,18 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../data/models.dart';
 
+class VitalogAppearance extends ThemeExtension<VitalogAppearance> {
+  const VitalogAppearance({required this.cartoon});
+  final bool cartoon;
+
+  @override
+  VitalogAppearance copyWith({bool? cartoon}) =>
+      VitalogAppearance(cartoon: cartoon ?? this.cartoon);
+  @override
+  VitalogAppearance lerp(covariant VitalogAppearance? other, double t) =>
+      other == null || t < .5 ? this : other;
+}
+
 class V {
   static const ink = Color(0xFF292723);
   static const paper = Color(0xFFFFE7EF);
@@ -15,6 +27,40 @@ class V {
   static const green = Color(0xFFA8D6B5);
   static const purple = Color(0xFFD5B9E8);
   static const muted = Color(0xFF756769);
+  static bool isCartoon(BuildContext context) =>
+      Theme.of(context).extension<VitalogAppearance>()?.cartoon ?? false;
+  static Color moduleColor(BuildContext context, String kind) =>
+      isCartoon(context)
+      ? color(kind)
+      : switch (kind) {
+          'meal' => const Color(0xFFF19761),
+          'workout' => const Color(0xFF36AD9F),
+          'habit' => const Color(0xFF9673CF),
+          _ => const Color(0xFF3854EF),
+        };
+  static Color panelColor(BuildContext context, Color? color) {
+    final surface = Theme.of(context).colorScheme.surface;
+    if (color == null) return surface;
+    if (isCartoon(context)) return color;
+    final kind = color == orange
+        ? 'meal'
+        : color == green
+        ? 'workout'
+        : color == purple
+        ? 'habit'
+        : 'course';
+    if ([blue, orange, green, purple, pink].contains(color)) {
+      return Color.alphaBlend(
+        moduleColor(context, kind).withValues(alpha: .1),
+        surface,
+      );
+    }
+    return color == cream ? surface : color;
+  }
+
+  static String mealImage(BuildContext context) => isCartoon(context)
+      ? 'assets/images/meal-cartoon.png'
+      : 'assets/images/meal-hero.png';
   static const buttonTextStyle = TextStyle(
     fontFamily: 'NotoSansSC',
     fontSize: 14,
@@ -36,38 +82,61 @@ class V {
     'habit' => Icons.auto_awesome_outlined,
     _ => Icons.event_outlined,
   };
-  static ThemeData theme(Brightness brightness) {
+  static ThemeData theme(Brightness brightness, {bool cartoon = false}) {
     final dark = brightness == Brightness.dark;
     final scheme =
         ColorScheme.fromSeed(
-          seedColor: blue,
+          seedColor: cartoon ? blue : const Color(0xFF3854EF),
           brightness: brightness,
-          surface: dark ? const Color(0xFF302D36) : cream,
+          surface: dark
+              ? const Color(0xFF302D36)
+              : cartoon
+              ? cream
+              : Colors.white,
         ).copyWith(
-          primary: dark ? pink : ink,
-          onPrimary: dark ? ink : cream,
-          secondaryContainer: pink,
+          primary: cartoon
+              ? (dark ? pink : ink)
+              : (dark ? const Color(0xFFB8C2FF) : const Color(0xFF3854EF)),
+          onPrimary: cartoon
+              ? (dark ? ink : cream)
+              : (dark ? ink : Colors.white),
+          secondaryContainer: cartoon ? pink : const Color(0xFFE7EAFF),
           onSecondaryContainer: ink,
-          outline: dark ? const Color(0xFFDBCFD4) : ink,
+          outline: cartoon
+              ? (dark ? const Color(0xFFDBCFD4) : ink)
+              : (dark ? const Color(0xFF676B7D) : const Color(0xFFDDE1ED)),
         );
     return ThemeData(
       useMaterial3: true,
+      extensions: [VitalogAppearance(cartoon: cartoon)],
       colorScheme: scheme,
       fontFamily: 'NotoSansSC',
-      scaffoldBackgroundColor: dark ? const Color(0xFF211E29) : paper,
+      scaffoldBackgroundColor: dark
+          ? const Color(0xFF211E29)
+          : cartoon
+          ? paper
+          : const Color(0xFFF7F8FD),
       textTheme: Typography.material2021().black.apply(
         fontFamily: 'NotoSansSC',
         bodyColor: dark ? Colors.white : ink,
         displayColor: dark ? Colors.white : ink,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: dark ? const Color(0xFF211E29) : paper,
+        backgroundColor: dark
+            ? const Color(0xFF211E29)
+            : cartoon
+            ? paper
+            : const Color(0xFFF7F8FD),
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: dark ? const Color(0xFF3F3744) : cream,
+        fillColor: dark
+            ? const Color(0xFF3F3744)
+            : cartoon
+            ? cream
+            : const Color(0xFFF6F7FC),
         // Draw a full rounded stroke without moving labels onto the top edge.
         border: const DoodleInputBorder(),
         enabledBorder: DoodleInputBorder(
@@ -90,14 +159,16 @@ class V {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: pink,
-          foregroundColor: ink,
+          backgroundColor: cartoon ? pink : scheme.primary,
+          foregroundColor: cartoon ? ink : scheme.onPrimary,
           textStyle: buttonTextStyle,
           iconSize: 18,
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
-            side: const BorderSide(color: ink, width: 2),
+            side: cartoon
+                ? const BorderSide(color: ink, width: 2)
+                : BorderSide.none,
           ),
         ),
       ),
@@ -132,12 +203,14 @@ class V {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: BorderSide(color: scheme.outline, width: 2.5),
+          side: cartoon
+              ? BorderSide(color: scheme.outline, width: 2.5)
+              : BorderSide.none,
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: scheme.surface,
-        selectedColor: orange,
+        selectedColor: cartoon ? orange : scheme.secondaryContainer,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         labelPadding: const EdgeInsets.symmetric(horizontal: 4),
         showCheckmark: true,
@@ -162,7 +235,9 @@ class V {
         backgroundColor: scheme.surface,
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: ink, width: 2),
+          side: cartoon
+              ? const BorderSide(color: ink, width: 2)
+              : BorderSide.none,
         ),
         labelTextStyle: WidgetStatePropertyAll(
           TextStyle(
@@ -179,7 +254,9 @@ class V {
             BorderSide(color: scheme.outline, width: 2),
           ),
           backgroundColor: WidgetStateProperty.resolveWith(
-            (s) => s.contains(WidgetState.selected) ? pink : scheme.surface,
+            (s) => s.contains(WidgetState.selected)
+                ? scheme.secondaryContainer
+                : scheme.surface,
           ),
           foregroundColor: WidgetStateProperty.resolveWith(
             (states) =>
@@ -260,13 +337,19 @@ class Buddy extends StatelessWidget {
   const Buddy({super.key, this.size = 100});
   final double size;
   @override
-  Widget build(BuildContext context) => Image.asset(
-    'assets/images/vitalog-buddy.png',
-    width: size,
-    height: size,
-    fit: BoxFit.contain,
-    excludeFromSemantics: true,
-  );
+  Widget build(BuildContext context) => V.isCartoon(context)
+      ? Image.asset(
+          'assets/images/vitalog-buddy.png',
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          excludeFromSemantics: true,
+        )
+      : Icon(
+          Icons.spa_rounded,
+          size: size,
+          color: Theme.of(context).colorScheme.primary,
+        );
 }
 
 class Panel extends StatelessWidget {
@@ -289,16 +372,20 @@ class Panel extends StatelessWidget {
     child: DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [BoxShadow(color: V.ink, offset: Offset(3, 4))],
+        boxShadow: V.isCartoon(context)
+            ? const [BoxShadow(color: V.ink, offset: Offset(3, 4))]
+            : const [],
       ),
       child: Material(
-        color: color ?? Theme.of(context).colorScheme.surface,
+        color: V.panelColor(context, color),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: BorderSide(
-            color: Theme.of(context).colorScheme.outline,
-            width: 2.5,
-          ),
+          side: V.isCartoon(context)
+              ? BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
+                  width: 2.5,
+                )
+              : BorderSide.none,
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -321,9 +408,18 @@ class CardAction extends StatelessWidget {
   Widget build(BuildContext context) => TextButton(
     onPressed: onPressed,
     style: TextButton.styleFrom(
-      backgroundColor: V.cream,
-      foregroundColor: V.ink,
-      side: const BorderSide(color: V.ink, width: 1.8),
+      backgroundColor: V.isCartoon(context)
+          ? V.cream
+          : Theme.of(context).colorScheme.surface,
+      foregroundColor: V.isCartoon(context)
+          ? V.ink
+          : Theme.of(context).colorScheme.onSurface,
+      side: BorderSide(
+        color: V.isCartoon(context)
+            ? V.ink
+            : Theme.of(context).colorScheme.outline,
+        width: 1.8,
+      ),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -337,21 +433,34 @@ class CardAction extends StatelessWidget {
 }
 
 class Tag extends StatelessWidget {
-  const Tag(this.text, {super.key, this.color = V.blue, this.solid = false});
+  const Tag(
+    this.text, {
+    super.key,
+    this.color = V.blue,
+    this.solid = false,
+    this.foregroundColor,
+  });
   final String text;
   final Color color;
   final bool solid;
+  final Color? foregroundColor;
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
     decoration: BoxDecoration(
-      color: color == V.ink ? V.cream : color,
+      color: V.panelColor(context, color == V.ink ? V.cream : color),
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: V.ink, width: 1.4),
+      border: V.isCartoon(context)
+          ? Border.all(color: V.ink, width: 1.4)
+          : null,
     ),
     child: Text(
       text,
-      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: V.ink),
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: foregroundColor ?? V.ink,
+      ),
     ),
   );
 }

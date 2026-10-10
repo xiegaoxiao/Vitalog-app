@@ -4,8 +4,73 @@ import 'package:vitalog/app.dart';
 import 'package:vitalog/data/controller.dart';
 import 'package:vitalog/data/demo.dart';
 import 'package:vitalog/ui/design.dart';
+import 'package:vitalog/ui/agenda.dart';
 
 void main() {
+  testWidgets(
+    'switching styles preserves approved control and timeline geometry',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final data = demoData(DateTime(2026, 10, 10));
+      Map<String, Size>? original;
+      for (final cartoon in [false, true]) {
+        for (final brightness in Brightness.values) {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: V.theme(brightness, cartoon: cartoon),
+              home: Scaffold(
+                body: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: ListView(
+                    children: [
+                      CardAction(
+                        key: const Key('action'),
+                        label: '查看安排',
+                        onPressed: () {},
+                      ),
+                      NutritionRow(
+                        data
+                            .onDay(DateTime(2026, 10, 10))
+                            .firstWhere((e) => e.kind == 'meal')
+                            .nutrition,
+                        key: const Key('nutrition'),
+                      ),
+                      AgendaTimeline(
+                        key: const Key('timeline'),
+                        events: data
+                            .onDay(DateTime(2026, 10, 10))
+                            .take(2)
+                            .toList(),
+                        onView: (_) {},
+                        onComplete: (_) {},
+                      ),
+                      ChoiceChip(
+                        key: const Key('filter'),
+                        label: const Text('课程'),
+                        selected: true,
+                        onSelected: (_) {},
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), null);
+          final sizes = {
+            for (final key in ['action', 'nutrition', 'timeline', 'filter'])
+              key: tester.getSize(find.byKey(Key(key))),
+          };
+          original ??= sizes;
+          expect(sizes, original);
+        }
+      }
+    },
+  );
   testWidgets(
     'form labels stay inside their fill and above values in all states',
     (tester) async {
@@ -113,14 +178,20 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       final c = AppController();
       c.data = demoData(DateTime.now());
-      await tester.pumpWidget(VitalogApp(controller: c));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), null);
-      expect(find.text('元气簿'), findsOneWidget);
-      for (final label in ['饮食', '日程', '训练', '我的', '今日']) {
-        await tester.tap(find.widgetWithText(NavigationDestination, label));
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), null);
+      for (final appearance in ['classic', 'cartoon']) {
+        for (final theme in ['light', 'dark']) {
+          c.data.settings['appearance'] = appearance;
+          c.data.settings['theme'] = theme;
+          await tester.pumpWidget(VitalogApp(controller: c));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), null);
+          expect(find.text('元气簿'), findsOneWidget);
+          for (final label in ['饮食', '日程', '训练', '我的', '今日']) {
+            await tester.tap(find.widgetWithText(NavigationDestination, label));
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), null);
+          }
+        }
       }
     },
   );

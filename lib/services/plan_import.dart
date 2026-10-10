@@ -380,6 +380,10 @@ AppData validateBackup(String raw) {
     ['light', 'dark', 'system'].contains(data.settings['theme']),
     '外观设置无效',
   );
+  require(
+    ['classic', 'cartoon'].contains(data.settings['appearance'] ?? 'classic'),
+    '主题风格无效',
+  );
   for (final key in ['sleepTime', 'wakeTime']) {
     final time = data.settings[key];
     require(

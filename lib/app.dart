@@ -17,8 +17,14 @@ class VitalogApp extends StatelessWidget {
       locale: const Locale('zh', 'CN'),
       supportedLocales: const [Locale('zh', 'CN'), Locale('en')],
       localizationsDelegates: localizationDelegates,
-      theme: V.theme(Brightness.light),
-      darkTheme: V.theme(Brightness.dark),
+      theme: V.theme(
+        Brightness.light,
+        cartoon: controller.data.settings['appearance'] == 'cartoon',
+      ),
+      darkTheme: V.theme(
+        Brightness.dark,
+        cartoon: controller.data.settings['appearance'] == 'cartoon',
+      ),
       themeMode: switch (controller.data.settings['theme']) {
         'dark' => ThemeMode.dark,
         'system' => ThemeMode.system,

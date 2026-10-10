@@ -60,21 +60,20 @@ class _HomeState extends State<Home> {
       bottomNavigationBar: wide
           ? null
           : DecoratedBox(
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: V.ink, width: 2.5)),
+              decoration: BoxDecoration(
+                border: V.isCartoon(context)
+                    ? const Border(top: BorderSide(color: V.ink, width: 2.5))
+                    : null,
               ),
               child: NavigationBar(
                 height: 76,
                 selectedIndex: tab,
                 onDestinationSelected: (v) => setState(() => tab = v),
                 backgroundColor: Theme.of(context).colorScheme.surface,
-                indicatorColor: [
-                  V.blue,
-                  V.orange,
-                  V.blue,
-                  V.green,
-                  V.purple,
-                ][tab],
+                indicatorColor: V.panelColor(
+                  context,
+                  [V.blue, V.orange, V.blue, V.green, V.purple][tab],
+                ),
                 destinations: List.generate(
                   5,
                   (i) => NavigationDestination(
@@ -183,7 +182,9 @@ class _HomeState extends State<Home> {
     padding: const EdgeInsets.fromLTRB(22, 30, 22, 24),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
-      border: const Border(right: BorderSide(color: V.ink, width: 2.5)),
+      border: V.isCartoon(context)
+          ? const Border(right: BorderSide(color: V.ink, width: 2.5))
+          : null,
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,14 +211,17 @@ class _HomeState extends State<Home> {
             padding: const EdgeInsets.only(bottom: 8),
             child: Material(
               color: i == tab
-                  ? V.color(
-                      i == 1
-                          ? 'meal'
-                          : i == 3
-                          ? 'workout'
-                          : i == 4
-                          ? 'habit'
-                          : 'course',
+                  ? V.panelColor(
+                      context,
+                      V.color(
+                        i == 1
+                            ? 'meal'
+                            : i == 3
+                            ? 'workout'
+                            : i == 4
+                            ? 'habit'
+                            : 'course',
+                      ),
                     )
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(14),
@@ -263,12 +267,27 @@ class _HomeState extends State<Home> {
     width: 46,
     height: 46,
     decoration: BoxDecoration(
-      color: V.cream,
+      color: V.isCartoon(context)
+          ? V.cream
+          : Theme.of(context).colorScheme.primary,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: V.ink, width: 2),
-      boxShadow: const [BoxShadow(color: V.ink, offset: Offset(2, 2))],
+      border: V.isCartoon(context) ? Border.all(color: V.ink, width: 2) : null,
+      boxShadow: V.isCartoon(context)
+          ? const [BoxShadow(color: V.ink, offset: Offset(2, 2))]
+          : const [],
     ),
-    child: const Buddy(size: 42),
+    child: V.isCartoon(context)
+        ? const Buddy(size: 42)
+        : const Center(
+            child: Text(
+              'V',
+              style: TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ),
   );
   Widget _header(bool wide) => Padding(
     padding: const EdgeInsets.only(bottom: 22),
@@ -344,7 +363,7 @@ class _HomeState extends State<Home> {
       ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: Image.asset(
-          'assets/images/meal-cartoon.png',
+          V.mealImage(context),
           height: 190,
           width: double.infinity,
           fit: BoxFit.cover,
@@ -381,8 +400,11 @@ class _HomeState extends State<Home> {
     final next = future.firstOrNull;
     final meals = today.where((e) => e.kind == 'meal').toList();
     final completed = today.where((e) => e.completed).length;
+    final cartoon = V.isCartoon(context);
+    final heroColor = cartoon ? V.pink : Theme.of(context).colorScheme.primary;
+    final heroInk = cartoon ? V.ink : Theme.of(context).colorScheme.onPrimary;
     final hero = Panel(
-      color: V.pink,
+      color: heroColor,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -390,14 +412,18 @@ class _HomeState extends State<Home> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Tag(next == null ? '留一点时间给自己' : '接下来 · 慢慢来', color: V.cream),
+                Tag(
+                  next == null ? '留一点时间给自己' : '接下来 · 慢慢来',
+                  color: cartoon ? V.cream : heroInk.withValues(alpha: .12),
+                  foregroundColor: heroInk,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   next?.title ?? '今天的节奏，由你安排',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 25,
                     fontWeight: FontWeight.w800,
-                    color: V.ink,
+                    color: heroInk,
                     height: 1.45,
                   ),
                 ),
@@ -406,7 +432,10 @@ class _HomeState extends State<Home> {
                   next == null
                       ? '导入计划，开启你的健康日常'
                       : '${clock(next.start)}—${clock(next.end)}${next.details['location'] != null ? '  · ${next.details['location']}' : ''}',
-                  style: const TextStyle(fontSize: 12, color: V.muted),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cartoon ? V.muted : heroInk.withValues(alpha: .8),
+                  ),
                 ),
                 const SizedBox(height: 14),
                 CardAction(
@@ -421,8 +450,10 @@ class _HomeState extends State<Home> {
             width: 106,
             child: Column(
               children: [
-                const Buddy(size: 106),
-                const SizedBox(height: 8),
+                if (cartoon) ...[
+                  const Buddy(size: 106),
+                  const SizedBox(height: 8),
+                ],
                 SizedBox(
                   width: 70,
                   height: 70,
@@ -437,8 +468,12 @@ class _HomeState extends State<Home> {
                           child: CircularProgressIndicator(
                             value: today.isEmpty ? 0 : completed / today.length,
                             strokeWidth: 5,
-                            backgroundColor: V.cream,
-                            color: V.ink,
+                            backgroundColor: cartoon
+                                ? V.cream
+                                : heroInk.withValues(alpha: .2),
+                            color: cartoon
+                                ? V.ink
+                                : V.moduleColor(context, 'meal'),
                           ),
                         ),
                         Column(
@@ -446,15 +481,20 @@ class _HomeState extends State<Home> {
                           children: [
                             Text(
                               '$completed/${today.length}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 19,
                                 fontWeight: FontWeight.w800,
-                                color: V.ink,
+                                color: heroInk,
                               ),
                             ),
-                            const Text(
+                            Text(
                               '已完成',
-                              style: TextStyle(fontSize: 9, color: V.muted),
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: cartoon
+                                    ? V.muted
+                                    : heroInk.withValues(alpha: .8),
+                              ),
                             ),
                           ],
                         ),
@@ -660,7 +700,7 @@ class _HomeState extends State<Home> {
               AspectRatio(
                 aspectRatio: 1.5,
                 child: Image.asset(
-                  'assets/images/meal-cartoon.png',
+                  V.mealImage(context),
                   width: double.infinity,
                   fit: BoxFit.cover,
                 ),
@@ -1498,7 +1538,24 @@ class _HomeState extends State<Home> {
             ),
             ListTile(
               leading: const Icon(Icons.palette_outlined, color: V.orange),
-              title: const Text('外观'),
+              title: const Text('主题风格'),
+              trailing: DropdownButton<String>(
+                value: d.settings['appearance'] as String? ?? 'classic',
+                underline: const SizedBox(),
+                items: const [
+                  DropdownMenuItem(value: 'classic', child: Text('经典蓝白')),
+                  DropdownMenuItem(value: 'cartoon', child: Text('元气卡通')),
+                ],
+                onChanged: (v) {
+                  if (v != null) {
+                    action(() => c.mutate((d) => d.settings['appearance'] = v));
+                  }
+                },
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.brightness_6_outlined, color: V.blue),
+              title: const Text('明暗模式'),
               trailing: DropdownButton<String>(
                 value: d.settings['theme'] as String? ?? 'light',
                 underline: const SizedBox(),
