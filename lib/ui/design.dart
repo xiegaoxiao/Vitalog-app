@@ -1,0 +1,779 @@
+import 'dart:math';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import '../data/models.dart';
+
+class V {
+  static const ink = Color(0xFF292723);
+  static const paper = Color(0xFFFFE7EF);
+  static const cream = Color(0xFFFFFDF5);
+  static const pink = Color(0xFFF3A2C4);
+  static const blue = Color(0xFFB9B7ED);
+  static const orange = Color(0xFFF5C77E);
+  static const green = Color(0xFFA8D6B5);
+  static const purple = Color(0xFFD5B9E8);
+  static const muted = Color(0xFF756769);
+  static Color color(String kind) => switch (kind) {
+    'meal' => orange,
+    'workout' => green,
+    'habit' => purple,
+    _ => blue,
+  };
+  static IconData icon(String kind) => switch (kind) {
+    'meal' => Icons.restaurant_rounded,
+    'workout' => Icons.fitness_center_rounded,
+    'course' => Icons.school_outlined,
+    'meeting' => Icons.groups_outlined,
+    'habit' => Icons.auto_awesome_outlined,
+    _ => Icons.event_outlined,
+  };
+  static ThemeData theme(Brightness brightness) {
+    final dark = brightness == Brightness.dark;
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: blue,
+          brightness: brightness,
+          surface: dark ? const Color(0xFF302D36) : cream,
+        ).copyWith(
+          primary: dark ? pink : ink,
+          onPrimary: dark ? ink : cream,
+          secondaryContainer: pink,
+          onSecondaryContainer: ink,
+          outline: dark ? const Color(0xFFDBCFD4) : ink,
+        );
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: scheme,
+      fontFamily: 'NotoSansSC',
+      scaffoldBackgroundColor: dark ? const Color(0xFF211E29) : paper,
+      textTheme: Typography.material2021().black.apply(
+        fontFamily: 'NotoSansSC',
+        bodyColor: dark ? Colors.white : ink,
+        displayColor: dark ? Colors.white : ink,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: dark ? const Color(0xFF211E29) : paper,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: false,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: dark ? const Color(0xFF3F3744) : cream,
+        // Draw a full rounded stroke without moving labels onto the top edge.
+        border: const DoodleInputBorder(),
+        enabledBorder: DoodleInputBorder(
+          borderSide: BorderSide(color: scheme.outline, width: 1.8),
+        ),
+        focusedBorder: DoodleInputBorder(
+          borderSide: BorderSide(color: scheme.outline, width: 2.8),
+        ),
+        errorBorder: DoodleInputBorder(
+          borderSide: BorderSide(color: scheme.error, width: 2),
+        ),
+        focusedErrorBorder: DoodleInputBorder(
+          borderSide: BorderSide(color: scheme.error, width: 2.8),
+        ),
+        alignLabelWithHint: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 10,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: pink,
+          foregroundColor: ink,
+          textStyle: const TextStyle(
+            fontFamily: 'NotoSansSC',
+            fontWeight: FontWeight.w700,
+          ),
+          minimumSize: const Size(0, 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: ink, width: 2),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 46),
+          foregroundColor: dark ? cream : ink,
+          side: BorderSide(color: scheme.outline, width: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: dark ? pink : ink,
+          textStyle: const TextStyle(
+            fontFamily: 'NotoSansSC',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: BorderSide(color: scheme.outline, width: 2.5),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: scheme.surface,
+        selectedColor: orange,
+        side: BorderSide(color: scheme.outline, width: 1.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        labelStyle: WidgetStateTextStyle.resolveWith(
+          (states) => TextStyle(
+            color: dark && !states.contains(WidgetState.selected) ? cream : ink,
+            fontFamily: 'NotoSansSC',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: scheme.surface,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: ink, width: 2),
+        ),
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(
+            fontFamily: 'NotoSansSC',
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+            color: dark ? cream : ink,
+          ),
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          side: WidgetStatePropertyAll(
+            BorderSide(color: scheme.outline, width: 2),
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? pink : scheme.surface,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) =>
+                dark && !states.contains(WidgetState.selected) ? cream : ink,
+          ),
+        ),
+      ),
+      dividerTheme: DividerThemeData(
+        color: dark ? Colors.white12 : const Color(0xFFEDF0F5),
+      ),
+    );
+  }
+}
+
+/// Filled-layout labels with a complete cartoon outline, including on focus.
+class DoodleInputBorder extends InputBorder {
+  const DoodleInputBorder({
+    super.borderSide = const BorderSide(color: V.ink, width: 1.8),
+    this.radius = 14,
+  });
+  final double radius;
+  @override
+  bool get isOutline => false;
+  @override
+  EdgeInsetsGeometry get dimensions => EdgeInsets.all(borderSide.width);
+  @override
+  DoodleInputBorder copyWith({BorderSide? borderSide}) => DoodleInputBorder(
+    borderSide: borderSide ?? this.borderSide,
+    radius: radius,
+  );
+  @override
+  DoodleInputBorder scale(double t) =>
+      DoodleInputBorder(borderSide: borderSide.scale(t), radius: radius * t);
+  @override
+  Path getOuterPath(Rect rect, {TextDirection? textDirection}) =>
+      Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
+  @override
+  Path getInnerPath(Rect rect, {TextDirection? textDirection}) =>
+      Path()..addRRect(
+        RRect.fromRectAndRadius(
+          rect.deflate(borderSide.width),
+          Radius.circular(max(0, radius - borderSide.width)),
+        ),
+      );
+  @override
+  void paint(
+    Canvas canvas,
+    Rect rect, {
+    double? gapStart,
+    double gapExtent = 0,
+    double gapPercentage = 0,
+    TextDirection? textDirection,
+  }) {
+    if (borderSide.style != BorderStyle.none) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          rect.deflate(borderSide.width / 2),
+          Radius.circular(radius),
+        ),
+        borderSide.toPaint(),
+      );
+    }
+  }
+
+  @override
+  ShapeBorder? lerpFrom(ShapeBorder? a, double t) => a is DoodleInputBorder
+      ? DoodleInputBorder(
+          borderSide: BorderSide.lerp(a.borderSide, borderSide, t),
+          radius: a.radius + (radius - a.radius) * t,
+        )
+      : super.lerpFrom(a, t);
+  @override
+  ShapeBorder? lerpTo(ShapeBorder? b, double t) =>
+      b is DoodleInputBorder ? b.lerpFrom(this, t) : super.lerpTo(b, t);
+}
+
+class Buddy extends StatelessWidget {
+  const Buddy({super.key, this.size = 100});
+  final double size;
+  @override
+  Widget build(BuildContext context) => Image.asset(
+    'assets/images/vitalog-buddy.png',
+    width: size,
+    height: size,
+    fit: BoxFit.contain,
+    excludeFromSemantics: true,
+  );
+}
+
+class Panel extends StatelessWidget {
+  const Panel({
+    super.key,
+    required this.child,
+    this.color,
+    this.padding = 20,
+    this.onTap,
+  });
+  final Widget child;
+  final Color? color;
+  final double padding;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: onTap != null,
+    button: onTap != null,
+    onTap: onTap,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [BoxShadow(color: V.ink, offset: Offset(3, 4))],
+      ),
+      child: Material(
+        color: color ?? Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.outline,
+            width: 2.5,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          excludeFromSemantics: onTap != null,
+          child: Padding(padding: EdgeInsets.all(padding), child: child),
+        ),
+      ),
+    ),
+  );
+}
+
+class Tag extends StatelessWidget {
+  const Tag(this.text, {super.key, this.color = V.blue, this.solid = false});
+  final String text;
+  final Color color;
+  final bool solid;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: color == V.ink ? V.cream : color,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: V.ink, width: 1.4),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: V.ink),
+    ),
+  );
+}
+
+class SectionTitle extends StatelessWidget {
+  const SectionTitle(this.title, {super.key, this.trailing, this.subtitle});
+  final String title;
+  final Widget? trailing;
+  final String? subtitle;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 24, bottom: 12),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (subtitle != null)
+                Text(
+                  subtitle!,
+                  style: const TextStyle(fontSize: 12, color: V.muted),
+                ),
+            ],
+          ),
+        ),
+        ?trailing,
+      ],
+    ),
+  );
+}
+
+class EmptyState extends StatelessWidget {
+  const EmptyState(
+    this.title,
+    this.subtitle, {
+    super.key,
+    this.action,
+    this.icon = Icons.spa_outlined,
+  });
+  final String title, subtitle;
+  final Widget? action;
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) => Panel(
+    child: Column(
+      children: [
+        Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            const Buddy(size: 76),
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: V.orange,
+                shape: BoxShape.circle,
+                border: Border.all(color: V.ink, width: 1.5),
+              ),
+              child: Icon(icon, size: 20, color: V.ink),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 13, color: V.muted, height: 1.8),
+        ),
+        if (action != null)
+          Padding(padding: const EdgeInsets.only(top: 16), child: action!),
+      ],
+    ),
+  );
+}
+
+String foodAsset(String name) {
+  for (final entry in {
+    '红薯': 'sweetpotato',
+    '土豆': 'potato',
+    '番茄': 'tomato',
+    '西红柿': 'tomato',
+    '黄瓜': 'cucumber',
+    '胡萝卜': 'carrot',
+    '西兰花': 'broccoli',
+    '苹果': 'apple',
+    '香蕉': 'banana',
+    '玉米': 'corn',
+    '鸡蛋': 'egg',
+    '鸡': 'chicken',
+    '奶': 'milk',
+    '菜': 'greens',
+    '桃': 'peach',
+    '橙': 'orange',
+    '面包': 'bread',
+  }.entries) {
+    if (name.contains(entry.key)) {
+      return entry.value;
+    }
+  }
+  return 'greens';
+}
+
+class FoodPicture extends StatelessWidget {
+  const FoodPicture(this.name, {super.key, this.size = 42});
+  final String name;
+  final double size;
+  @override
+  Widget build(BuildContext context) => SvgPicture.asset(
+    'assets/food/${foodAsset(name)}.svg',
+    width: size,
+    height: size,
+    semanticsLabel: name,
+    placeholderBuilder: (_) =>
+        Icon(Icons.eco_outlined, size: size, color: V.green),
+  );
+}
+
+class NutritionRow extends StatelessWidget {
+  const NutritionRow(this.nutrition, {super.key, this.compact = false});
+  final Json nutrition;
+  final bool compact;
+  @override
+  Widget build(BuildContext context) => Row(
+    children: nutrientKeys
+        .map(
+          (key) => Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  number(nutrition[key])
+                          ?.toStringAsFixed(key == 'calories' ? 0 : 1) ??
+                      '—',
+                  style: TextStyle(
+                    fontSize: compact ? 17 : 23,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${nutrientNames[key]} ${key == 'calories' ? 'kcal' : 'g'}',
+                  style: const TextStyle(fontSize: 10, color: V.muted),
+                ),
+              ],
+            ),
+          ),
+        )
+        .toList(),
+  );
+}
+
+Future<DateTime?> chooseDateTime(BuildContext context, DateTime initial) async {
+  final date = await showDatePicker(
+    context: context,
+    initialDate: initial,
+    firstDate: DateTime(2020),
+    lastDate: DateTime(2040),
+  );
+  if (date == null || !context.mounted) {
+    return null;
+  }
+  final time = await showTimePicker(
+    context: context,
+    initialTime: TimeOfDay.fromDateTime(initial),
+  );
+  return time == null
+      ? null
+      : DateTime(date.year, date.month, date.day, time.hour, time.minute);
+}
+
+Future<DateTime?> chooseDate(BuildContext context, DateTime initial) =>
+    showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2040),
+    );
+void toast(BuildContext context, String message) {
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  }
+}
+
+String errorText(Object e) => e is FormatException
+    ? e.message.toString()
+    : '操作未完成，请检查输入或存储空间后重试。${e is ArgumentError ? ' 输入格式无效。' : ''}';
+Future<bool> confirm(
+  BuildContext context,
+  String title,
+  String text, {
+  String action = '确认',
+}) async =>
+    await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(text),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(action),
+          ),
+        ],
+      ),
+    ) ??
+    false;
+
+class EditorDialog extends StatefulWidget {
+  const EditorDialog({
+    super.key,
+    required this.title,
+    required this.child,
+    required this.onSave,
+    this.label = '保存',
+  });
+  final String title, label;
+  final Widget child;
+  final Future<void> Function() onSave;
+  @override
+  State<EditorDialog> createState() => _EditorDialogState();
+}
+
+class _EditorDialogState extends State<EditorDialog> {
+  bool busy = false;
+  String? error;
+  @override
+  Widget build(BuildContext context) => Dialog(
+    insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+    clipBehavior: Clip.antiAlias,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(24),
+      side: BorderSide(
+        color: Theme.of(context).colorScheme.outline,
+        width: 2.5,
+      ),
+    ),
+    child: ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: 580,
+        maxHeight: MediaQuery.sizeOf(context).height * .9,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: busy ? null : () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Flexible(child: SingleChildScrollView(child: widget.child)),
+            if (error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: busy
+                    ? null
+                    : () async {
+                        setState(() {
+                          busy = true;
+                          error = null;
+                        });
+                        try {
+                          await widget.onSave();
+                          if (context.mounted) {
+                            Navigator.pop(context, true);
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            setState(() {
+                              busy = false;
+                              error = errorText(e);
+                            });
+                          }
+                        }
+                      },
+                child: busy
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(widget.label),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget field(
+  TextEditingController c,
+  String label, {
+  bool numeric = false,
+  int lines = 1,
+  String? hint,
+}) => Padding(
+  padding: const EdgeInsets.only(bottom: 12),
+  child: TextField(
+    controller: c,
+    keyboardType: numeric
+        ? const TextInputType.numberWithOptions(decimal: true)
+        : lines > 1
+        ? TextInputType.multiline
+        : TextInputType.text,
+    maxLines: lines,
+    decoration: InputDecoration(labelText: label, hintText: hint),
+  ),
+);
+Widget rowFields(Widget a, Widget b) => Row(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Expanded(child: a),
+    const SizedBox(width: 12),
+    Expanded(child: b),
+  ],
+);
+
+class TrendChart extends StatelessWidget {
+  const TrendChart(this.records, {super.key});
+  final List<Json> records;
+  @override
+  Widget build(BuildContext context) {
+    final sorted = [...records]
+      ..sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
+    final values = sorted.length > 14
+        ? sorted.sublist(sorted.length - 14)
+        : sorted;
+    if (values.length < 2) {
+      return const SizedBox(
+        height: 130,
+        child: Center(
+          child: Text(
+            '记录两次体重后，会在这里看到趋势',
+            style: TextStyle(fontSize: 12, color: V.muted),
+          ),
+        ),
+      );
+    }
+    return Semantics(
+      label:
+          '最近 ${values.length} 次体重：${values.first['value']} 到 ${values.last['value']} 千克',
+      child: Column(
+        children: [
+          SizedBox(
+            height: 140,
+            width: double.infinity,
+            child: CustomPaint(
+              painter: _TrendPainter(
+                values.map((e) => number(e['value'])!).toList(),
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                (values.first['date'] as String).substring(5),
+                style: const TextStyle(fontSize: 11, color: V.muted),
+              ),
+              Text(
+                (values.last['date'] as String).substring(5),
+                style: const TextStyle(fontSize: 11, color: V.muted),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendPainter extends CustomPainter {
+  _TrendPainter(this.values);
+  final List<double> values;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final lo = values.reduce(min) - .2, hi = values.reduce(max) + .2;
+    final line = Paint()
+      ..color = V.purple
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+    final path = Path();
+    final points = <Offset>[];
+    for (var i = 0; i < values.length; i++) {
+      final p = Offset(
+        i / (values.length - 1) * size.width,
+        12 + (hi - values[i]) / (hi - lo) * (size.height - 24),
+      );
+      points.add(p);
+      if (i == 0) {
+        path.moveTo(p.dx, p.dy);
+      } else {
+        path.lineTo(p.dx, p.dy);
+      }
+    }
+    for (var i = 1; i < 4; i++) {
+      canvas.drawLine(
+        Offset(0, size.height * i / 4),
+        Offset(size.width, size.height * i / 4),
+        Paint()..color = V.muted.withValues(alpha: .12),
+      );
+    }
+    final fill = Path.from(path)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(
+      fill,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0x339474E8), Color(0x009474E8)],
+        ).createShader(Offset.zero & size),
+    );
+    canvas.drawPath(path, line);
+    for (final point in points) {
+      canvas.drawCircle(point, 3, Paint()..color = V.purple);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TrendPainter old) =>
+      old.values.toString() != values.toString();
+}
