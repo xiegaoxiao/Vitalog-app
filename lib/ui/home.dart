@@ -1070,6 +1070,8 @@ class _HomeState extends State<Home> {
       (value as num).toStringAsFixed(value == value.round() ? 0 : 1);
 
   List<Widget> _calendar() {
+    final cartoon = V.isCartoon(context);
+    final scheme = Theme.of(context).colorScheme;
     final weekStart = selected.subtract(Duration(days: selected.weekday - 1));
     final items = d
         .onDay(selected)
@@ -1124,9 +1126,11 @@ class _HomeState extends State<Home> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: active ? V.blue : null,
+                        color: active
+                            ? (cartoon ? V.blue : scheme.primary)
+                            : null,
                         borderRadius: BorderRadius.circular(15),
-                        border: active
+                        border: active && cartoon
                             ? Border.all(color: V.ink, width: 2)
                             : null,
                       ),
@@ -1136,7 +1140,9 @@ class _HomeState extends State<Home> {
                             '一二三四五六日'[i],
                             style: TextStyle(
                               fontSize: 10,
-                              color: active ? V.ink : V.muted,
+                              color: active
+                                  ? (cartoon ? V.ink : scheme.onPrimary)
+                                  : scheme.onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -1145,7 +1151,9 @@ class _HomeState extends State<Home> {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
-                              color: active ? V.ink : null,
+                              color: active
+                                  ? (cartoon ? V.ink : scheme.onPrimary)
+                                  : null,
                             ),
                           ),
                           const SizedBox(height: 7),
@@ -1156,8 +1164,8 @@ class _HomeState extends State<Home> {
                               color: d.onDay(day).isEmpty
                                   ? Colors.transparent
                                   : active
-                                  ? V.orange
-                                  : V.blue,
+                                  ? (cartoon ? V.orange : scheme.onPrimary)
+                                  : (cartoon ? V.blue : scheme.primary),
                               shape: BoxShape.circle,
                             ),
                           ),

@@ -73,12 +73,21 @@ class AgendaTimeline extends StatelessWidget {
   Widget _card(BuildContext context, PlanItem event) {
     final scheme = Theme.of(context).colorScheme;
     final muted = scheme.onSurfaceVariant;
-    final color = V.color(event.kind);
+    final cartoon = V.isCartoon(context);
+    final color = V.moduleColor(context, event.kind);
+    final accentFill = Color.alphaBlend(
+      color.withValues(alpha: .12),
+      scheme.surface,
+    );
     return Material(
-      color: Color.alphaBlend(color.withValues(alpha: .2), scheme.surface),
+      color: cartoon
+          ? Color.alphaBlend(color.withValues(alpha: .2), scheme.surface)
+          : scheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: scheme.outline, width: 1.8),
+        side: cartoon
+            ? BorderSide(color: scheme.outline, width: 1.8)
+            : BorderSide.none,
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -94,11 +103,17 @@ class AgendaTimeline extends StatelessWidget {
                     width: 30,
                     height: 30,
                     decoration: BoxDecoration(
-                      color: color,
+                      color: cartoon ? color : accentFill,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: V.ink, width: 1.4),
+                      border: cartoon
+                          ? Border.all(color: V.ink, width: 1.4)
+                          : null,
                     ),
-                    child: Icon(V.icon(event.kind), size: 18, color: V.ink),
+                    child: Icon(
+                      V.icon(event.kind),
+                      size: 18,
+                      color: cartoon ? V.ink : color,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -119,9 +134,20 @@ class AgendaTimeline extends StatelessWidget {
                     onPressed: () =>
                         event.completed ? onView(event) : onComplete(event),
                     style: IconButton.styleFrom(
-                      foregroundColor: V.ink,
-                      backgroundColor: event.completed ? color : V.cream,
-                      side: const BorderSide(color: V.ink, width: 1.5),
+                      foregroundColor: cartoon
+                          ? V.ink
+                          : event.completed
+                          ? scheme.onPrimary
+                          : scheme.primary,
+                      backgroundColor: cartoon
+                          ? (event.completed ? color : V.cream)
+                          : event.completed
+                          ? scheme.primary
+                          : scheme.surface,
+                      side: BorderSide(
+                        color: cartoon ? V.ink : scheme.outline,
+                        width: 1.5,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -153,12 +179,15 @@ class AgendaTimeline extends StatelessWidget {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: color,
+                      color: cartoon ? color : accentFill,
                       borderRadius: BorderRadius.circular(7),
                     ),
                     child: Text(
                       kindNames[event.kind] ?? '日程',
-                      style: const TextStyle(fontSize: 12, color: V.ink),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cartoon ? V.ink : scheme.onSurface,
+                      ),
                     ),
                   ),
                   Text(
